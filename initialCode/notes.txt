@@ -1,0 +1,1 @@
+its a notes files for the node js and here define some modules 
