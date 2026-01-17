@@ -3,10 +3,31 @@ import db from "../db/index.js";
 import { userSessions, usersTable } from "../db/schema.js";
 import { eq } from "drizzle-orm";
 import { createHmac, randomBytes } from "node:crypto";
+import jwt from "jsonwebtoken";
 
 const router = express.Router();
 
-router.get("/");
+router.patch("/", async (req, res) => {
+  const user = req.user;
+  if (!user) {
+    return res.status(401).json({ errer: "you are not log in " });
+  }
+  const { name } = req.body;
+  await db.update(usersTable).set({ name }).where(eq(usersTable.id, user.id));
+
+  return res.json({ status: "success" });
+});
+
+router.get("/", async (req, res) => {
+  const user = req.user;
+
+  if (!user) {
+    return res.status(401).json({ errer: "you are not log in " });
+  }
+
+  return res.json({ user });
+});
+
 router.post("/signup", async (req, res) => {
   const { name, email, password } = req.body;
 
@@ -48,7 +69,7 @@ router.post("/login", async (req, res) => {
       name: usersTable.name,
       email: usersTable.email,
       salt: usersTable.salt,
-      //   role: usersTable.role,
+      role: usersTable.role,
       password: usersTable.password,
     })
     .from(usersTable)
@@ -68,13 +89,23 @@ router.post("/login", async (req, res) => {
   if (newHash !== existingHash) {
     return res.status(400).json({ error: "incorrect Password" });
   }
+  // for session base
+  // const [session] = await db
+  //   .insert(userSessions)
+  //   .values({ userId: existingUser.id })
+  //   .returning({ id: userSessions.id });
 
-  const [session] = await db
-    .insert(userSessions)
-    .values({ userId: existingUser.id })
-    .returning({ id: userSessions.id });
+  // using jwt
+  const payload = {
+    id: existingUser.id,
+    email: existingUser.email,
+    name: existingUser.name,
+    role: existingUser.role,
+  };
 
-  return res.json({ status: "success", sessionId: session.id });
+  const token = jwt.sign(payload, process.env.JWT_SECRET);
+
+  return res.json({ status: "success", token });
 });
 
 export default router;
