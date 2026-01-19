@@ -8,21 +8,18 @@ import {
 const router = express.Router();
 
 const adminRestricketMiddleware = restrictToRole("ADMIN");
-router.get(
-  "/users",
-  ensureAuthenticated,
-  adminRestricketMiddleware,
-  async (req, res) => {
-    const users = await db
-      .select({
-        id: usersTable.id,
-        name: usersTable.name,
-        email: usersTable.email,
-      })
-      .from(usersTable);
+router.use(ensureAuthenticated);
+router.use(adminRestricketMiddleware);
+router.get("/users", async (req, res) => {
+  const users = await db
+    .select({
+      id: usersTable.id,
+      name: usersTable.name,
+      email: usersTable.email,
+    })
+    .from(usersTable);
 
-    return res.json({ users });
-  }
-);
+  return res.json({ users });
+});
 
 export default router;
